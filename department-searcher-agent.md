@@ -1,10 +1,10 @@
-# Agente de búsqueda de departamentos – Las Condes
+# Agente de búsqueda de departamentos
 
-Oct 19, 2026 · @Nicolás
+Oct 19, 2026 · @Nicolás · configurado por defecto para Las Condes (venta)
 
 ## Cómo usarlo
 
-Para correr la búsqueda: ajusta los Parámetros, copia la Instrucción del agente en un chat nuevo con Claude in Chrome activo y pídele que la ejecute. Las otras secciones son la referencia que el agente necesita (y que tú puedes revisar si algo cambia en un portal).
+Para correr la búsqueda: ajusta los **Parámetros**, y copia en un chat nuevo con Claude in Chrome activo estas cuatro secciones completas — **Parámetros**, **Instrucción del agente**, **Mapa de portales** y **Reglas de validación** — y pídele que las ejecute. Las demás secciones son para ti, no hace falta pegarlas.
 
 Antes de correrla:
 
@@ -14,69 +14,124 @@ Antes de correrla:
 
 Documentos relacionados:
 
-- [`docs/portales.md`](docs/portales.md) — cómo extraer datos de cada portal y qué filtros no son confiables. Es la referencia técnica para construir un scraper.
-- [`docs/esquema-salida.md`](docs/esquema-salida.md) — qué entrega una corrida, para agente y scraper por igual.
+- [`docs/portales.md`](docs/portales.md) — cómo funciona cada portal y qué filtros no son confiables. Útil si un portal cambia y hay que actualizar una URL.
+- [`docs/esquema-salida.md`](docs/esquema-salida.md) — las columnas del Excel y qué significa cada estado.
 - [`validacion/`](validacion/) — salidas de corridas anteriores, para comparar cobertura.
 
 ## Parámetros
 
-Este es el único bloque que hay que tocar para cambiar la búsqueda. La instrucción del agente lo lee tal cual.
+Es el único bloque que hay que tocar para cambiar la búsqueda. El agente lo lee tal cual, así que respeta el formato: **el comentario de cada línea dice qué tipo de valor espera**. Si algo está mal escrito, el agente se detiene y te avisa antes de abrir ningún portal.
 
 ```
-OPERACION        = venta
-COMUNA           = Las Condes
-COMUNA_SLUG      = las-condes        # como aparece en la URL de los portales
-REGION_SLUG      = metropolitana     # region, en el formato de la URL
-MAPA_GOPLACEIT   = 13/-33.41/-70.55  # zoom/lat/lng que encuadra la comuna
-TIPOLOGIAS:
+OPERACION        = venta                 # solo "venta" por ahora
+
+# ---- DÓNDE buscar (los tres slugs deben apuntar a la MISMA comuna) ----
+COMUNA           = Las Condes            # texto libre, se usa en el informe
+COMUNA_SLUG      = las-condes            # minúsculas y guiones, sin tildes
+REGION_SLUG      = metropolitana         # minúsculas y guiones, sin tildes
+MAPA_GOPLACEIT   = 13/-33.41/-70.55      # tres números separados por "/"
+
+# ---- QUÉ buscar ----
+TIPOLOGIAS:                              # una línea por tipo, mínimo una
   - nombre: 1D1B   dormitorios: 1  baños: 1  precio_max_uf: 4500
   - nombre: 2D2B   dormitorios: 2  baños: 2  precio_max_uf: 6700
-UF_M2_MAX        = 100     # tope duro: se descarta si UF/m² > este valor
-UF_M2_IDEAL      = 90      # se marca como destacado si UF/m² <= este valor
-M2_FILTRO_MIN    = 1D1B: 35 | 2D2B: 50   # piso suelto para filtrar en el portal
-ESTACIONAMIENTO  = obligatorio (1 o más)
-PISCINA          = deseable (no descarta)
-PAGINAS_MAX      = 5 por portal y tipología
-VALOR_UF_CLP     = usar el del día (fuente: sii.cl o el que muestre Toctoc)
+                                         # los tres son enteros
+                                         # precio SIN punto ni coma: 4500, no 4.500
+UF_M2_MAX        = 100                   # entero. Descarta si UF/m² es mayor
+UF_M2_IDEAL      = 90                    # entero. Marca ★ si es menor o igual
+M2_FILTRO_MIN    = 1D1B: 35 | 2D2B: 50   # entero por tipología
+ESTACIONAMIENTO  = obligatorio           # obligatorio | deseable | indiferente
+PISCINA          = deseable              # obligatorio | deseable | indiferente
+
+# ---- CUÁNTO buscar ----
+PAGINAS_MAX      = 5                     # entero. Páginas por portal y tipología
+VALOR_UF_CLP     = auto                  # "auto" (lo saca de Toctoc) o un entero: 41184
 ```
+
+`obligatorio` descarta el aviso si no lo cumple. `deseable` solo lo informa en una columna. `indiferente` lo ignora del todo.
 
 La regla de precio se calcula como UF/m² = precio en UF ÷ m² útiles. Un aviso pasa si su precio es menor o igual al máximo de su tipología y su UF/m² es menor o igual a UF\_M2\_MAX. El piso de m² en el filtro es deliberadamente bajo: un depto de 4.000 UF cumple con 40 m², así que el corte real se hace aviso por aviso.
 
-**Para cambiar de comuna** hay que ajustar los tres slugs. `COMUNA_SLUG` y `REGION_SLUG` se
-sacan mirando la URL de cualquier portal después de buscar la comuna a mano (Providencia es
-`providencia`, Viña del Mar es `vina-del-mar`). `MAPA_GOPLACEIT` se saca abriendo
-goplaceit.com/cl/mapa, encuadrando la comuna y copiando lo que queda después del `#` en la
-barra de direcciones. Si el encuadre es generoso van a entrar comunas vecinas: no es un
-problema, la regla de comuna las descarta después.
+## Cambiar de comuna
+
+Es el cambio que más se equivoca, y **falla en silencio**: si un slug queda mal, el portal devuelve resultados de otra comuna —o de todo Chile— sin dar ningún error. Por eso el agente confirma la comuna en la primera página de cada portal y se detiene si no calza.
+
+Son tres valores, y los tres tienen que apuntar a la misma comuna.
+
+**1. `COMUNA_SLUG` y `REGION_SLUG`** salen juntos. Busca la comuna a mano en Portal Inmobiliario y mira la URL que queda:
+
+```
+portalinmobiliario.com/venta/departamento/1-dormitorio/providencia-metropolitana/
+                                                       └─ COMUNA_SLUG
+                                                                   └─ REGION_SLUG
+```
+
+Siempre en minúsculas, con guiones y sin tildes: Ñuñoa es `nunoa`, Viña del Mar es `vina-del-mar`.
+
+**2. `MAPA_GOPLACEIT`** sale del mapa. Abre `goplaceit.com/cl/mapa`, encuadra la comuna en pantalla y copia lo que queda después del `#`:
+
+```
+goplaceit.com/cl/mapa?...&selectedTool=list#13/-33.43/-70.61
+                                            └─ esto es MAPA_GOPLACEIT
+```
+
+Si el encuadre es generoso van a entrar comunas vecinas. No importa: la regla de comuna las descarta después.
+
+**3. `COMUNA`** es el nombre escrito normal, "Providencia". Se usa en el informe y para que el agente verifique que los resultados calzan.
 
 ## Instrucción del agente
 
-Copia este bloque completo (junto con Parámetros, Mapa de portales y Reglas de validación) en un chat nuevo.
+Copia en un chat nuevo estas cuatro secciones completas: **Parámetros**, **Instrucción del agente**, **Mapa de portales** y **Reglas de validación**. Después dile "ejecuta esto".
 
 ```
 Eres un agente de búsqueda de departamentos. Usa Claude in Chrome para recorrer los portales
 listados en "Mapa de portales" y encontrar avisos que cumplan los PARAMETROS.
+
+PASO 0 - VALIDA LOS PARAMETROS ANTES DE ABRIR NINGUN PORTAL
+Revisa que cada valor tenga el formato que dice su comentario. Errores típicos: precios
+escritos como 4.500 en vez de 4500; slugs con tildes, mayúsculas o espacios; MAPA_GOPLACEIT
+con comas en vez de "/"; ESTACIONAMIENTO o PISCINA con un valor que no es obligatorio,
+deseable ni indiferente. Si algo está mal, NO lo corrijas por tu cuenta y NO empieces a
+buscar: dime qué parámetro está mal, qué valor tiene y qué formato espera, y espera mi
+respuesta. Si está todo bien, dime en una línea qué vas a buscar y arranca.
 
 PASOS
 1. Para cada TIPOLOGIA y cada portal, arma la URL plantilla reemplazando los valores de
    PARAMETROS y abre la búsqueda. Si el portal no filtra por URL, aplica los filtros con clics
    según el mapa. Si no puedes acceder a un portal (permiso, captcha, login), sigue con el
    siguiente y repórtalo al final.
-2. Recorre los resultados hasta PAGINAS_MAX páginas. Por cada aviso anota: portal, título,
+2. CONFIRMA LA COMUNA en la primera página de resultados de cada portal: mira las direcciones
+   de los primeros avisos y verifica que sean de COMUNA. Si un portal devuelve otra comuna, el
+   slug está mal escrito: detente, dime qué portal y qué comuna devolvió, y no sigas
+   recorriendo páginas equivocadas. (Houm y Goplaceit son la excepción: rellenan con comunas
+   vecinas por diseño, ahí filtra aviso por aviso en vez de detenerte.)
+3. Recorre los resultados hasta PAGINAS_MAX páginas. Por cada aviso anota: portal, título,
    URL del aviso, precio (UF y moneda original), dormitorios, baños, m² útiles, dirección o barrio.
-3. Aplica las Reglas de validación. Descarta lo que no cumpla precio, dormitorios, baños o
+4. Aplica las Reglas de validación. Descarta lo que no cumpla precio, dormitorios, baños o
    UF_M2_MAX.
-4. Para los que pasan, abre el aviso y confirma estacionamiento y piscina en la ficha o la
+5. Para los que pasan, abre el aviso y confirma estacionamiento y piscina en la ficha o la
    descripción. NUNCA des por buena la casilla de estacionamiento del portal: en Portal
-   Inmobiliario falló en 1 de cada 4 avisos. Estacionamiento: Sí / No / No informado. Si es No,
-   descártalo. Si es No informado, déjalo con esa marca. Si no alcanzas a verificar un aviso,
-   márcalo "Califica (sin verificar)" en vez de "Califica".
-5. Detecta duplicados entre portales (misma dirección o calle + precio + m² parecidos) y deja
+   Inmobiliario falló en 1 de cada 4 avisos. Anota Sí / No / No informado, y en una columna
+   aparte de dónde sacaste el dato (ficha, descripción o título).
+   Si ESTACIONAMIENTO es "obligatorio", descarta los que sean No. Si es "deseable", solo
+   infórmalo. Si es "indiferente", ni lo busques. Lo mismo para PISCINA.
+6. Marca el Estado de cada aviso: "Califica" si verificaste la ficha, "Califica (sin
+   verificar)" si pasó los filtros pero no alcanzaste a abrirla, "Descartado" si falló alguna
+   regla (anotando cuál).
+7. Detecta duplicados entre portales (misma dirección o calle + precio + m² parecidos) y deja
    una sola fila con todos los links.
-6. Entrega el resultado como archivo Excel siguiendo docs/esquema-salida.md: hojas Resumen,
-   Avisos, Fuentes y Proyectos, con los valores calculados como fórmulas. Ordena por UF/m²
-   de menor a mayor.
-7. Si al recorrer los portales descubres algo que contradice el "Mapa de portales" (un filtro
+8. Entrega el resultado como archivo Excel con cuatro hojas:
+   - Resumen: los parámetros usados, el valor de la UF con su fuente y fecha, los conteos por
+     tipología y estado, y "Portales sin acceso" (si no falló ninguno, dilo explícitamente).
+   - Avisos: una fila por departamento con los duplicados ya fusionados, ordenada por UF/m² de
+     menor a mayor. Columnas: ID, Tipología, Estado, Destacado, UF/m², Precio (UF), Moneda
+     publicada, m² útiles, Estacionamiento, Fuente estacionamiento, Piscina, Barrio/dirección,
+     Actualizado el, Motivo descarte, Alertas, Portales, N° avisos, Link principal, Otros links.
+   - Fuentes: una fila por aviso-portal. Columnas: ID unidad, Tipología, Estado, Portal,
+     ID en el portal, URL (canónica, sin parámetros de tracking).
+   - Proyectos: los avisos de "Desde UF X" con rango de m², que no permiten calcular UF/m².
+   UF/m², Destacado y los conteos van como FORMULAS de Excel, no como números pegados.
+9. Si al recorrer los portales descubres algo que contradice el "Mapa de portales" (un filtro
    que no funciona, una paginación distinta, un portal que rellena con otras comunas),
    anótalo al final en una lista aparte llamada "Correcciones al mapa".
 
@@ -159,22 +214,22 @@ Cada aviso pasa estos chequeos en orden; el primero que falla lo descarta.
 2. **Precio en UF.** Si viene en pesos, convertir: UF = pesos ÷ VALOR\_UF\_CLP. Debe ser menor o igual al precio\_max\_uf de su tipología.
 3. **m² útiles.** Usar siempre m² útiles, nunca totales. Si el aviso solo da totales, marcarlo "m² útiles no informados" y no calcular la razón.
 4. **UF/m².** Precio en UF ÷ m² útiles, menor o igual a UF\_M2\_MAX. Si es menor o igual a UF\_M2\_IDEAL, se marca como destacado.
-5. **Comuna.** Confirmar que está en Las Condes. Houm rellena con comunas vecinas y Goplaceit busca por rectángulo del mapa.
-6. **Estacionamiento.** Confirmado en la ficha o descripción, **no en el filtro del portal**. No → descartar. No informado → queda, con esa marca.
-7. **Piscina.** Solo informativa: Sí / No / No informado.
+5. **Comuna.** Confirmar que está en COMUNA. Houm rellena con comunas vecinas y Goplaceit busca por rectángulo del mapa.
+6. **Estacionamiento.** Confirmado en la ficha o descripción, **no en el filtro del portal**. Si el parámetro es `obligatorio`: No → descartar, No informado → queda con esa marca. Si es `deseable`: solo se informa. Si es `indiferente`: no se revisa.
+7. **Piscina.** Mismo criterio que estacionamiento, según su parámetro.
 
 Datos que hay que limpiar:
 
 - Precios absurdos (menos de 1.000 UF o pagos de promesa) → descartar.
 - m² absurdos (por ejemplo, 2.011 m² en un 1D) → revisar la ficha; si no se aclara, descartar.
-- Avisos marcados "VENDIDO" que siguen activos, y propiedades fuera de Chile publicadas con dirección de Las Condes → descartar.
+- Avisos marcados "VENDIDO" que siguen activos, y propiedades fuera de Chile publicadas con dirección de la comuna → descartar.
 - Proyectos con "Desde UF X" y rango de m² → no calcular; listarlos aparte como "proyectos a revisar".
 - Duplicados entre portales → una fila con todos los links. Si los m² difieren entre portales, usar el menor y anotarlo.
 - Republicaciones dentro del mismo portal (mismo depto, distinto MLC) → fusionar.
 
 ## Formato de salida
 
-Un archivo Excel con las hojas **Resumen**, **Avisos**, **Fuentes** y **Proyectos**, según [`docs/esquema-salida.md`](docs/esquema-salida.md). Los valores calculados (UF/m², destacados, conteos) van como fórmulas, no como números pegados.
+Un archivo Excel con las hojas **Resumen**, **Avisos**, **Fuentes** y **Proyectos**. Las columnas exactas están en el paso 8 de la Instrucción del agente, y explicadas una por una en [`docs/esquema-salida.md`](docs/esquema-salida.md).
 
 ## Corrida del 19-10-2026
 
