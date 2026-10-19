@@ -25,6 +25,9 @@ Este es el único bloque que hay que tocar para cambiar la búsqueda. La instruc
 ```
 OPERACION        = venta
 COMUNA           = Las Condes
+COMUNA_SLUG      = las-condes        # como aparece en la URL de los portales
+REGION_SLUG      = metropolitana     # region, en el formato de la URL
+MAPA_GOPLACEIT   = 13/-33.41/-70.55  # zoom/lat/lng que encuadra la comuna
 TIPOLOGIAS:
   - nombre: 1D1B   dormitorios: 1  baños: 1  precio_max_uf: 4500
   - nombre: 2D2B   dormitorios: 2  baños: 2  precio_max_uf: 6700
@@ -38,6 +41,13 @@ VALOR_UF_CLP     = usar el del día (fuente: sii.cl o el que muestre Toctoc)
 ```
 
 La regla de precio se calcula como UF/m² = precio en UF ÷ m² útiles. Un aviso pasa si su precio es menor o igual al máximo de su tipología y su UF/m² es menor o igual a UF\_M2\_MAX. El piso de m² en el filtro es deliberadamente bajo: un depto de 4.000 UF cumple con 40 m², así que el corte real se hace aviso por aviso.
+
+**Para cambiar de comuna** hay que ajustar los tres slugs. `COMUNA_SLUG` y `REGION_SLUG` se
+sacan mirando la URL de cualquier portal después de buscar la comuna a mano (Providencia es
+`providencia`, Viña del Mar es `vina-del-mar`). `MAPA_GOPLACEIT` se saca abriendo
+goplaceit.com/cl/mapa, encuadrando la comuna y copiando lo que queda después del `#` en la
+barra de direcciones. Si el encuadre es generoso van a entrar comunas vecinas: no es un
+problema, la regla de comuna las descarta después.
 
 ## Instrucción del agente
 
@@ -96,7 +106,7 @@ El detalle de extracción de cada portal (paginación, selectores, API de Goplac
 **Portal Inmobiliario**
 
 ```
-https://www.portalinmobiliario.com/venta/departamento/{D}-dormitorio{s}/las-condes-metropolitana/_PriceRange_0CLF-{PRECIO_MAX}CLF_Cocheras_1-*_Banos_{B}
+https://www.portalinmobiliario.com/venta/departamento/{D}-dormitorio{s}/{COMUNA_SLUG}-{REGION_SLUG}/_PriceRange_0CLF-{PRECIO_MAX}CLF_Cocheras_1-*_Banos_{B}
 ```
 
 `{D}-dormitorio` para 1 y `{D}-dormitorios` para 2 o más. `CLF` es la UF. Piscina: agregar `_HAS*SWIMMING*POOL_242085` al final. Paginación: `_Desde_{N}` antes de `_PriceRange`, con N = 49, 97, 145… (48 avisos por página).
@@ -106,7 +116,7 @@ https://www.portalinmobiliario.com/venta/departamento/{D}-dormitorio{s}/las-cond
 **Toctoc**
 
 ```
-https://www.toctoc.com/venta/departamento/metropolitana/las-condes?moneda=UF&precios=0,{PRECIO_MAX}&dormitorios={D},{D}&bannos={B},{B}
+https://www.toctoc.com/venta/departamento/{REGION_SLUG}/{COMUNA_SLUG}?moneda=UF&precios=0,{PRECIO_MAX}&dormitorios={D},{D}&bannos={B},{B}
 ```
 
 Paginación `&pagina={N}`, 20 por página, esperar 5-7 s a que renderice. Las tarjetas no son links: hay que hacer clic en "Ver más". Muestra precio en UF y pesos, lo que da el valor UF del día.
@@ -116,7 +126,7 @@ Paginación `&pagina={N}`, 20 por página, esperar 5-7 s a que renderice. Las ta
 **Chilepropiedades**
 
 ```
-https://chilepropiedades.cl/propiedades/venta/departamento/las-condes/{PAGINA}?precioUnidad=3&precioMax={PRECIO_MAX}&habitaciones={D}&banos={B}&areaMin={M2_FILTRO_MIN}&areaUnidad=1&avanzada=true
+https://chilepropiedades.cl/propiedades/venta/departamento/{COMUNA_SLUG}/{PAGINA}?precioUnidad=3&precioMax={PRECIO_MAX}&habitaciones={D}&banos={B}&areaMin={M2_FILTRO_MIN}&areaUnidad=1&avanzada=true
 ```
 
 `{PAGINA}` arranca en 0. `precioUnidad=3` = UF. 10 avisos por página, y la página declara "Total de páginas: N".
@@ -126,7 +136,7 @@ https://chilepropiedades.cl/propiedades/venta/departamento/las-condes/{PAGINA}?p
 **Houm**
 
 ```
-https://houm.com/cl/venta-departamentos-region-metropolitana/las-condes/desde-{D}-dormitorios/hasta-{D}-dormitorios/{1-bano|2-banos}/1-estacionamiento?currency=CLF&maxPrice={PRECIO_MAX}&minArea={M2_FILTRO_MIN}
+https://houm.com/cl/venta-departamentos-region-{REGION_SLUG}/{COMUNA_SLUG}/desde-{D}-dormitorios/hasta-{D}-dormitorios/{1-bano|2-banos}/1-estacionamiento?currency=CLF&maxPrice={PRECIO_MAX}&minArea={M2_FILTRO_MIN}
 ```
 
 ⚠️ Si no hay resultados en la comuna, rellena con Ñuñoa y La Reina sin avisar: validar la comuna de cada aviso. `minArea` es sobre m² **totales**. En la corrida completa del 19-10 aportó 1 aviso de 250, descartado — es candidato a sacarlo del mapa.
@@ -134,7 +144,7 @@ https://houm.com/cl/venta-departamentos-region-metropolitana/las-condes/desde-{D
 **Goplaceit**
 
 ```
-https://www.goplaceit.com/cl/mapa?tipo_propiedad=2&id_modalidad=1&precio_venta_hasta={PRECIO_MAX}&dormitorio_desde={D}&dormitorio_hasta={D}&bano_desde={B}&bano_hasta={B}&area_desde={M2_FILTRO_MIN}&estacionamientos=true&selectedTool=list#13/-33.41/-70.55
+https://www.goplaceit.com/cl/mapa?tipo_propiedad=2&id_modalidad=1&precio_venta_hasta={PRECIO_MAX}&dormitorio_desde={D}&dormitorio_hasta={D}&bano_desde={B}&bano_hasta={B}&area_desde={M2_FILTRO_MIN}&estacionamientos=true&selectedTool=list#{MAPA_GOPLACEIT}
 ```
 
 Busca por **área visible del mapa**: lo que va después de `#` es zoom/lat/lng, y con el zoom por defecto entran Providencia, Ñuñoa y Santiago. Hay que confirmar la comuna en cada aviso — el rótulo de la ficha puede ser absurdo (marcó "Molina, Maule" un depto en Paul Harris Sur).
