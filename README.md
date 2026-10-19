@@ -25,14 +25,13 @@ Ahí defines comuna, presupuesto y qué tipo de departamento buscas. Viene confi
 
 Confirma que Claude tenga permiso sobre los cinco dominios. Si alguno queda bloqueado, el agente sigue con los demás y te lo reporta al final.
 
-**3. Copia y pega estas cuatro secciones del documento, completas, en el chat:**
+**3. Adjunta el archivo al chat y dile:**
 
-- `Parámetros`
-- `Instrucción del agente`
-- `Mapa de portales`
-- `Reglas de validación`
+> Lee la Instrucción del agente de este archivo y ejecútala usando sus Parámetros.
 
-Y dile: **"ejecuta esto"**.
+Dile explícitamente "la Instrucción del agente": el archivo trae secciones que son para ti y no conviene que las mezcle con lo que debe ejecutar.
+
+Si vas a correrlo seguido, el documento explica también cómo hacerlo desde **Cowork** apuntando a esta carpeta: no copias ni adjuntas nada y el Excel queda guardado acá mismo.
 
 Eso es todo. El agente recorre los portales, abre las fichas de los que pasan el filtro, y arma el Excel.
 

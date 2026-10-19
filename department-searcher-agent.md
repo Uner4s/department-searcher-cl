@@ -4,13 +4,51 @@ Oct 19, 2026 · @Nicolás · configurado por defecto para Las Condes (venta)
 
 ## Cómo usarlo
 
-Para correr la búsqueda: ajusta los **Parámetros**, y copia en un chat nuevo con Claude in Chrome activo estas cuatro secciones completas — **Parámetros**, **Instrucción del agente**, **Mapa de portales** y **Reglas de validación** — y pídele que las ejecute. Las demás secciones son para ti, no hace falta pegarlas.
+Hay dos formas. Las dos usan la extensión **Claude in Chrome**, que es lo que le permite a Claude abrir los portales: estos sitios cargan los resultados con JavaScript y no hay manera de leerlos sin un navegador de verdad. Un chat sin la extensión va a entender las instrucciones perfecto y no va a poder ejecutarlas.
 
-Antes de correrla:
+Antes de cualquiera de las dos:
 
-1. Abre Chrome con la extensión Claude in Chrome conectada.
+1. Abre Chrome con la extensión Claude in Chrome conectada (plan Pro, Max, Team o Enterprise).
 2. Verifica que el agente tenga permiso en los cinco dominios: portalinmobiliario.com, toctoc.com, chilepropiedades.cl, houm.com y goplaceit.com. Si alguno queda bloqueado, el agente sigue con los demás y lo reporta.
 3. Si un portal pide captcha o login, el agente se detiene y te avisa: eso lo resuelves tú.
+4. Ajusta el bloque de **Parámetros** de este archivo.
+
+### Opción 1 — Subirle este archivo a un chat
+
+La más fácil, y la recomendada si recién empiezas.
+
+1. Abre un chat nuevo en Chrome, con la extensión activa.
+2. Adjunta este archivo (`department-searcher-agent.md`).
+3. Escríbele:
+
+> Lee la Instrucción del agente de este archivo y ejecútala usando sus Parámetros.
+
+El Excel te queda para descargar del chat.
+
+Dile explícitamente **"la Instrucción del agente"**: el archivo trae secciones que son para ti —la corrida del 19-10, los pendientes— y no quieres que las mezcle con lo que debe ejecutar.
+
+Si prefieres no adjuntar archivos, funciona igual copiando y pegando cuatro secciones completas: **Parámetros**, **Instrucción del agente**, **Mapa de portales** y **Reglas de validación**.
+
+### Opción 2 — Cowork, con la carpeta del repo
+
+Más cómoda si vas a correrlo seguido, porque el archivo queda como fuente y el Excel cae solo en la carpeta.
+
+1. Abre Claude Desktop y ve a la pestaña **Cowork**.
+2. Conecta la extensión: Configuración → Conectores → *Claude in Chrome*. Chrome abierto, igual que en la opción 1.
+3. **"Work in a folder"** → apunta a la carpeta de este repo (no a tu carpeta personal entera).
+4. Escríbele:
+
+> Lee `department-searcher-agent.md`. Ejecuta la Instrucción del agente usando los Parámetros de ese archivo, y deja el Excel en esta carpeta.
+
+Ventajas sobre la opción 1: no copias ni adjuntas nada, el Excel queda guardado en la carpeta, y para cambiar la búsqueda editas los Parámetros del archivo en vez de arrastrar un chat viejo. Los `docs/` también le quedan a mano si un portal cambió.
+
+El Desktop tiene que quedar abierto mientras corre. Si lo cierras, se corta.
+
+### La primera corrida, achícala
+
+Una corrida completa son 5 portales × 2 tipologías × hasta 5 páginas, más abrir la ficha de cada candidato: es pesada y consume bastante de tu límite de uso.
+
+Para la primera vez pon `PAGINAS_MAX = 1` y deja una sola tipología. Así ves cómo se comporta antes de soltarla entera. No hay contador de tokens, pero puedes mirar **Configuración → Uso** en claude.ai antes y después para saber cuánto costó.
 
 Documentos relacionados:
 
